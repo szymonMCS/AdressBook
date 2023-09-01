@@ -5,6 +5,7 @@
 #include <fstream>
 #include <sstream>
 #include <conio.h>
+#include <limits>
 
 struct User {
     int id;
@@ -34,12 +35,10 @@ bool isFileEmpty (std::vector<Contact>& contacts) {
     }
 }
 
-bool isContactWithSpecifiedIDExists (std::vector<Contact>& contacts) {
+int doContactWithSpecifiedIDExists (std::vector<Contact>& contacts, int input) {
 
     bool flagContactExist;
-    int input, position;
-
-    std::cin >> input;
+    int position;
 
     for (int i = 0; i < contacts.size(); i++) {
         if (contacts[i].id == input) {
@@ -50,10 +49,12 @@ bool isContactWithSpecifiedIDExists (std::vector<Contact>& contacts) {
     }
 
     if (!flagContactExist) {
+        system("cls");
         std::cout << "Contact with the following ID doesn't exist..." << std::endl;
+        position = -1;
     }
 
-    return flagContactExist;
+    return position;
 }
 
 void menu (int number) {
@@ -201,6 +202,38 @@ void readContactsFromFile(std::vector<Contact>& contacts, int loggedInUserID) {
     file.close();
 }
 
+int previousContactID () {
+
+    std::ifstream file ("contactsDatabase.txt", std::ios::in);
+
+    int previousID = -1;
+    char previousChar, currentChar;
+
+    if (!file.is_open()) {
+        std::cout << "Unable to open the file." << std::endl;
+        return -1;
+    }
+
+    file.seekg(0, std:: ios::end);
+    int length = file.tellg();
+    length -= 3;
+    file.seekg(length);
+
+    while (length > 0) {
+        currentChar = file.get();
+        if (currentChar == '\n') {
+            int charToInt = previousChar - '0';
+            previousID = charToInt;
+            return previousID;
+            break;
+        }
+        length --;
+        file.seekg(length);
+        previousChar = currentChar;
+    }
+}
+
+
 void saveUserToFile(std::vector<User>& users, int positionInVector) {
 
     std::fstream file;
@@ -213,8 +246,9 @@ void saveUserToFile(std::vector<User>& users, int positionInVector) {
     file.close();
 }
 
-void saveContactToFile(std::vector<Contact>& contacts, int positionInVector, int loggedInUserID) {
+void saveContactToFile(std::vector<Contact>& contacts, int loggedInUserID) {
 
+    int positionInVector = contacts.size() - 1;
     std::fstream file;
     file.open("contactsDatabase.txt", std::ios::out | std::ios::app);
 
@@ -365,7 +399,6 @@ int loggingOut (std::vector<Contact>& contacts, int loggedInUserID) {
 
 void addContact(std::vector<Contact>& contacts, int loggedInUserID) {
 
-    int vectorSize = contacts.size();
     std::string name, surname, email, address, phoneNumber;
 
     Contact newContact;
@@ -385,16 +418,10 @@ void addContact(std::vector<Contact>& contacts, int loggedInUserID) {
     std::cout << "Write contact phone number: " << std::endl;
     newContact.phoneNumber = readLine();
 
-    if (contacts.empty()) {
-     newContact.id = 1;
-    }
-    else {
-        int newID = contacts.back().id + 1;
-        newContact.id = newID;
-    }
+    newContact.id = previousContactID()+1;
 
     contacts.push_back(newContact);
-    saveContactToFile(contacts, vectorSize, loggedInUserID);
+    saveContactToFile(contacts, loggedInUserID);
 
     std::cout << std::endl << "Contact has been added" << std::endl;
     Sleep(1500);
@@ -407,19 +434,22 @@ void deleteContact(std::vector<Contact>& contacts, int loggedInUserID) {
     }
     else {
 
-        bool flagContactExist;
-        int input,position;
         char choice;
+        int input;
 
         system("cls");
         std::cout << "Enter ID of contact to be removed:" << std::endl;
+        std::cin >> input;
 
-        if (!isContactWithSpecifiedIDExists(contacts)) {
+        int position = doContactWithSpecifiedIDExists(contacts, input);
+
+        if ( position == -1) {
             Sleep(1000);
             system("pause");
             return;
         }
 
+        system("cls");
         std::cout << "Press \"t\" to confirm deletion or \"n\" key to abort " << std::endl;
 
         while(true) {
@@ -532,14 +562,16 @@ void editContactData(std::vector<Contact>& contacts, int loggedInUserID) {
     }
     else {
 
-        bool flagContactExist;
-        int input, position;
         char choice;
+        int input;
 
         system("cls");
-        std::cout << "Enter ID of contact to be edited: " << std::endl;
+        std::cout << "Enter ID of contact to be removed:" << std::endl;
+        std::cin >> input;
 
-        if (!isContactWithSpecifiedIDExists(contacts)) {
+        int position = doContactWithSpecifiedIDExists(contacts, input);
+
+        if ( position == -1) {
             Sleep(1000);
             system("pause");
             return;
@@ -646,7 +678,7 @@ int main() {
                 switch (secondChoice) {
                 case '1': addContact(contacts, loggedInUserID);                  break;
                 case '2': searchContactByName(contacts);                         break;
-                case '3': searchContactsBySurname(contacts);                     break;
+                 case '3': searchContactsBySurname(contacts);                     break;
                 case '4': displayAllContacts(contacts);                          break;
                 case '5': editContactData(contacts, loggedInUserID);             break;
                 case '6': deleteContact(contacts, loggedInUserID);               break;
